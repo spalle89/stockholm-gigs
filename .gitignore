@@ -1,0 +1,18 @@
+# Generated JSON files (produced by scrapers)
+events_*.json
+
+# Raw HTML debug files
+*.html
+!index.html
+
+# Debug scripts
+debug_*.py
+fix_*.py
+
+# Python
+venv/
+__pycache__/
+*.pyc
+
+# Mac
+.DS_Store
