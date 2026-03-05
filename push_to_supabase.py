@@ -2,8 +2,9 @@ import json
 import os
 import requests
 
-SUPABASE_URL = "https://kfqipfsywnecuceziiiy.supabase.co"
-SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtmcWlwZnN5d25lY3VjZXppaWl5Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MjY4OTA5OSwiZXhwIjoyMDg4MjY1MDk5fQ.FIx5Qtzo7rlmfIdMSVtbqCGo78sdfJdyp34IUL7MsRA"
+import os
+SUPABASE_URL = os.environ.get("SUPABASE_URL", "https://kfqipfsywnecuceziiiy.supabase.co")
+SUPABASE_KEY = os.environ.get("SUPABASE_KEY", "")
 
 HEADERS = {
     "apikey": SUPABASE_KEY,

@@ -1,0 +1,47 @@
+name: Weekly Scrape
+
+on:
+  schedule:
+    - cron: '0 6 * * 1'  # Every Monday at 06:00 UTC
+  workflow_dispatch:       # Allow manual runs from GitHub UI
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          pip install requests beautifulsoup4 playwright
+          playwright install chromium
+          playwright install-deps chromium
+
+      - name: Run scrapers
+        run: |
+          python scrape_fasching.py
+          python scrape_debaser.py
+          python scrape_nalen.py
+          python scrape_sodra_teatern.py
+          python scrape_fallan_bk.py
+          python scrape_berns.py
+          python scrape_brygghuset.py
+          python scrape_annexet.py
+          python scrape_kollektivet_livet.py
+          python scrape_cirkus.py
+
+      - name: Merge events
+        run: python merge_events.py
+
+      - name: Push to Supabase
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+        run: python push_to_supabase.py
