@@ -468,42 +468,10 @@
 
 <script>
 // ─────────────────────────────────────────────
-// SAMPLE DATA  (will be replaced by real scraper)
+// SUPABASE CONFIG
 // ─────────────────────────────────────────────
-const events = [
-  { date: "2026-03-05", artist: "Danny Brown",        venue: "Debaser",          genre: "Hip-hop",    time: "20:00", price: "380 kr" },
-  { date: "2026-03-05", artist: "Ariel Posen",        venue: "Nalen",            genre: "Blues rock", time: "19:30", price: "295 kr" },
-  { date: "2026-03-06", artist: "Emoklubben",         venue: "Debaser",          genre: "Club",       time: "22:00", price: "150 kr" },
-  { date: "2026-03-06", artist: "Jazz Trio Night",    venue: "Fasching",         genre: "Jazz",       time: "20:00", price: "220 kr" },
-  { date: "2026-03-07", artist: "dublon",             venue: "Nalen",            genre: "Indie",      time: "19:00", price: "Free" },
-  { date: "2026-03-07", artist: "MELFEST WKND",       venue: "Nalen",            genre: "Pop",        time: "21:00", price: "195 kr" },
-  { date: "2026-03-12", artist: "Hyllar Jazzens Stora Vokalister", venue: "Södra Teatern", genre: "Jazz", time: "19:30", price: "280 kr" },
-  { date: "2026-03-13", artist: "Di Leva — Kärleken är kung!", venue: "Södra Teatern", genre: "Rock", time: "20:00", price: "345 kr" },
-  { date: "2026-03-14", artist: "Moon Safari",        venue: "Brygghuset",       genre: "Prog rock",  time: "19:30", price: "260 kr" },
-  { date: "2026-03-14", artist: "Afro Fusion Collective", venue: "Fasching",     genre: "Jazz",       time: "21:00", price: "180 kr" },
-  { date: "2026-03-19", artist: "Club 00pium",        venue: "Debaser",          genre: "Electronic", time: "22:00", price: "200 kr" },
-  { date: "2026-03-20", artist: "Candlemass",         venue: "Berns",            genre: "Metal",      time: "20:00", price: "420 kr", soldOut: true },
-  { date: "2026-03-20", artist: "Primal Fear",        venue: "Kollektivet Livet",genre: "Metal",      time: "19:00", price: "380 kr" },
-  { date: "2026-03-22", artist: "Jimi Jules b2b DJ Tennis", venue: "B-K",        genre: "Electronic", time: "22:00", price: "280 kr" },
-  { date: "2026-03-23", artist: "The Last Airbender in Concert", venue: "Annexet", genre: "Orchestral", time: "19:30", price: "495 kr" },
-  { date: "2026-03-26", artist: "Buzzcocks My Disease", venue: "Kollektivet Livet", genre: "Punk",   time: "20:00", price: "330 kr" },
-  { date: "2026-03-27", artist: "Unplugged Sessions", venue: "Södra Teatern",    genre: "Acoustic",   time: "20:00", price: "220 kr" },
-  { date: "2026-03-28", artist: "R&B Fest Stockholm", venue: "Debaser",          genre: "R&B",        time: "21:00", price: "240 kr" },
-  { date: "2026-04-02", artist: "Albin Lee Meldau",   venue: "Cirkus",           genre: "Pop",        time: "20:00", price: "395 kr" },
-  { date: "2026-04-02", artist: "Zement",             venue: "Kollektivet Livet",genre: "Industrial", time: "20:00", price: "180 kr" },
-  { date: "2026-04-03", artist: "Emoklubben x Panic!", venue: "Debaser",         genre: "Club",       time: "22:00", price: "150 kr" },
-  { date: "2026-04-10", artist: "Behemoth & Dimmu Borgir", venue: "B-K",         genre: "Metal",      time: "18:00", price: "650 kr" },
-  { date: "2026-04-13", artist: "Kreator",            venue: "Annexet",          genre: "Metal",      time: "19:00", price: "445 kr" },
-  { date: "2026-04-17", artist: "IST IST",            venue: "Kollektivet Livet",genre: "Post-punk",  time: "20:00", price: "290 kr" },
-  { date: "2026-04-18", artist: "Gustav Lundgren Trio", venue: "Fasching",       genre: "Jazz",       time: "20:00", price: "220 kr" },
-  { date: "2026-04-22", artist: "Toy Dolls",          venue: "Kollektivet Livet",genre: "Punk",       time: "19:30", price: "310 kr" },
-  { date: "2026-04-24", artist: "Räfven",             venue: "Kollektivet Livet",genre: "Folk",       time: "19:00", price: "200 kr" },
-  { date: "2026-04-25", artist: "Infected Rain",      venue: "Kollektivet Livet",genre: "Metal",      time: "19:00", price: "350 kr" },
-  { date: "2026-05-01", artist: "Stockholm Roots",    venue: "Debaser",          genre: "Americana",  time: "17:00", price: "295 kr" },
-  { date: "2026-05-12", artist: "Dermot Kennedy",     venue: "Annexet",          genre: "Folk pop",   time: "19:30", price: "520 kr", soldOut: true },
-  { date: "2026-05-22", artist: "Hannes",             venue: "Cirkus",           genre: "Pop",        time: "20:00", price: "345 kr" },
-  { date: "2026-05-27", artist: "Phosphorescent",     venue: "Nalen",            genre: "Indie",      time: "20:00", price: "280 kr" },
-];
+const SUPABASE_URL = 'https://kfqipfsywnecuceziiiy.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtmcWlwZnN5d25lY3VjZXppaWl5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI2ODkwOTksImV4cCI6MjA4ODI2NTA5OX0.HSQXo8QhfzkS2D9s3MGpIJ4WCi-UhaIlegr6wtNtqOU';
 
 // ─────────────────────────────────────────────
 // RENDERING
@@ -511,16 +479,21 @@ const events = [
 const DAYS = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
 const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 
+let allEvents = [];
 let activeVenue = 'all';
 let searchQuery = '';
 
 function renderCalendar() {
   const cal = document.getElementById('calendar');
 
+  const today = new Date().toISOString().slice(0,10);
+
   // Filter
-  let filtered = events.filter(e => {
+  let filtered = allEvents.filter(e => {
     const venueMatch = activeVenue === 'all' || e.venue === activeVenue;
-    const searchMatch = !searchQuery || e.artist.toLowerCase().includes(searchQuery) || e.venue.toLowerCase().includes(searchQuery);
+    const searchMatch = !searchQuery
+      || e.artist.toLowerCase().includes(searchQuery)
+      || e.venue.toLowerCase().includes(searchQuery);
     return venueMatch && searchMatch;
   });
 
@@ -535,16 +508,15 @@ function renderCalendar() {
   const byMonth = {};
   filtered.forEach(e => {
     const d = new Date(e.date + 'T12:00:00');
-    const monthKey = `${d.getFullYear()}-${d.getMonth()}`;
+    const monthKey = `${d.getFullYear()}-${String(d.getMonth()).padStart(2,'0')}`;
     if (!byMonth[monthKey]) byMonth[monthKey] = { label: MONTHS[d.getMonth()] + ' ' + d.getFullYear(), days: {} };
     if (!byMonth[monthKey].days[e.date]) byMonth[monthKey].days[e.date] = [];
     byMonth[monthKey].days[e.date].push(e);
   });
 
-  const today = new Date().toISOString().slice(0,10);
   let html = '';
-
-  Object.values(byMonth).forEach(month => {
+  Object.keys(byMonth).sort().forEach(monthKey => {
+    const month = byMonth[monthKey];
     html += `<div class="month-group"><div class="month-label">${month.label}</div>`;
     Object.entries(month.days).sort().forEach(([dateStr, dayEvents]) => {
       const d = new Date(dateStr + 'T12:00:00');
@@ -556,21 +528,22 @@ function renderCalendar() {
         </div>
         <div class="events-col">`;
       dayEvents.forEach(ev => {
-        html += `<div class="event-card">
+        const url = ev.ticket_url || ev.event_url || '';
+        const cardInner = `
           <div class="event-main">
             <div class="event-title">${ev.artist}</div>
             <div class="event-meta">
               <span class="venue-tag">${ev.venue}</span>
-              <span class="event-time">${ev.time}</span>
+              ${ev.sub_venue ? `<span class="genre-pill">${ev.sub_venue}</span>` : ''}
               ${ev.genre ? `<span class="genre-pill">${ev.genre}</span>` : ''}
             </div>
           </div>
           <div class="event-right">
-            ${ev.soldOut
-              ? '<span class="sold-out">Sold out</span>'
-              : `<span class="event-price">${ev.price || ''}</span>`}
-          </div>
-        </div>`;
+            ${url ? '<span class="event-price">Tickets →</span>' : ''}
+          </div>`;
+        html += url
+          ? `<a class="event-card" href="${url}" target="_blank" rel="noopener">${cardInner}</a>`
+          : `<div class="event-card">${cardInner}</div>`;
       });
       html += `</div></div>`;
     });
@@ -578,6 +551,44 @@ function renderCalendar() {
   });
 
   cal.innerHTML = html;
+}
+
+function showLoading() {
+  document.getElementById('calendar').innerHTML = '<p class="empty">Loading events…</p>';
+}
+
+function showError(msg) {
+  document.getElementById('calendar').innerHTML = `<p class="empty">⚠ ${msg}</p>`;
+}
+
+// ─────────────────────────────────────────────
+// FETCH FROM SUPABASE
+// ─────────────────────────────────────────────
+async function loadEvents() {
+  showLoading();
+  const today = new Date().toISOString().slice(0,10);
+
+  try {
+    // Fetch all upcoming events, ordered by date
+    const res = await fetch(
+      `${SUPABASE_URL}/rest/v1/events?date=gte.${today}&order=date.asc,artist.asc&limit=2000`,
+      { headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` } }
+    );
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    allEvents = await res.json();
+
+    // Update footer with today's date
+    const lastScan = document.querySelector('.update-badge');
+    if (lastScan) {
+      const d = new Date();
+      lastScan.innerHTML = `<div class="dot"></div>Updated weekly · Last scan: ${d.getDate()} ${MONTHS[d.getMonth()].slice(0,3)} ${d.getFullYear()}`;
+    }
+
+    renderCalendar();
+  } catch (err) {
+    showError('Could not load events. Please try again later.');
+    console.error(err);
+  }
 }
 
 // ── Filter buttons ──
@@ -597,7 +608,7 @@ document.getElementById('search').addEventListener('input', e => {
 });
 
 // ── Init ──
-renderCalendar();
+loadEvents();
 </script>
 </body>
 </html>
