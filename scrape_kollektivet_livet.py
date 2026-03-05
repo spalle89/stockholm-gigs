@@ -1,11 +1,12 @@
-import requests
-from bs4 import BeautifulSoup
+import asyncio
 import json
 import re
 from datetime import datetime, timedelta
+from playwright.async_api import async_playwright
+from bs4 import BeautifulSoup
 
-BASE_URL = "https://stadsgardsterminalen.com"
 URL = "https://stadsgardsterminalen.com/program/"
+BASE_URL = "https://stadsgardsterminalen.com"
 
 MONTH_MAP = {
     "jan": "January", "feb": "February", "mar": "March", "apr": "April",
@@ -13,28 +14,16 @@ MONTH_MAP = {
     "sep": "September", "okt": "October", "nov": "November", "dec": "December"
 }
 
-WEEKDAYS = {"mån", "tis", "ons", "tor", "fre", "lör", "sön"}
-
 def parse_date(date_str):
-    """
-    Parse Swedish date strings like:
-    - 'tors 12 mars'
-    - 'lör 7 mars till sön 8 mars'
-    - 'Idag'
-    - 'Imorgon till lör 7 mars'
-    Returns (day, month_en, year) for start date
-    """
     today = datetime.now()
     date_str = date_str.strip().lower()
 
     if date_str == "idag":
         return today.day, today.strftime("%B"), today.year
-
     if date_str.startswith("imorgon"):
-        tomorrow = today + timedelta(days=1)
-        return tomorrow.day, tomorrow.strftime("%B"), tomorrow.year
+        t = today + timedelta(days=1)
+        return t.day, t.strftime("%B"), t.year
 
-    # Extract first date occurrence: optional weekday + day + month
     m = re.search(r"(\d{1,2})\s+(jan|feb|mar|apr|maj|jun|jul|aug|sep|okt|nov|dec)", date_str)
     if m:
         day = int(m.group(1))
@@ -42,60 +31,115 @@ def parse_date(date_str):
         month_en = MONTH_MAP.get(month_sv)
         if not month_en:
             return None, None, None
-        # Determine year: if month is earlier than current month, assume next year
         month_num = list(MONTH_MAP.keys()).index(month_sv) + 1
         year = today.year if month_num >= today.month else today.year + 1
         return day, month_en, year
 
     return None, None, None
 
-def scrape():
-    resp = requests.get(URL, headers={"User-Agent": "Mozilla/5.0"})
-    resp.encoding = "utf-8"
-    soup = BeautifulSoup(resp.text, "html.parser")
+async def scrape():
+    async with async_playwright() as p:
+        browser = await p.chromium.launch(headless=True)
+        page = await browser.new_page()
 
+        print("Loading Kollektivet Livet program page...")
+        await page.goto(URL, wait_until="domcontentloaded")
+        await page.wait_for_timeout(3000)
+
+        # Scroll incrementally and click "LÄS IN FLER" whenever it appears
+        clicks = 0
+        scroll_pos = 0
+        no_button_count = 0
+
+        while no_button_count < 5:
+            # Scroll down a bit
+            scroll_pos += 600
+            await page.evaluate(f"window.scrollTo(0, {scroll_pos})")
+            await page.wait_for_timeout(500)
+
+            # Try to click the button via JS
+            clicked = await page.evaluate("""
+                () => {
+                    const els = Array.from(document.querySelectorAll('a, button'));
+                    const btn = els.find(e => e.innerText.trim() === 'LÄS IN FLER');
+                    if (btn) { btn.click(); return true; }
+                    return false;
+                }
+            """)
+            if clicked:
+                await page.wait_for_timeout(2000)
+                clicks += 1
+                scroll_pos = 0  # reset scroll after new content loads
+                no_button_count = 0
+                print(f"  Clicked 'LÄS IN FLER' ({clicks}x), loading more...")
+            else:
+                # Check if we've reached the bottom
+                at_bottom = await page.evaluate(
+                    "window.scrollY + window.innerHeight >= document.body.scrollHeight - 100"
+                )
+                if at_bottom:
+                    no_button_count += 1
+
+        print(f"Done clicking. Extracting HTML...")
+        html = await page.content()
+        await browser.close()
+
+    soup = BeautifulSoup(html, "html.parser")
     events = []
     seen = set()
 
-    # Each event card: image, date text, sub-venue, h3 artist, ticket link
-    # Cards are linked via <a href="/event/...">
-    for card in soup.select("a[href*='/event/']"):
-        href = card.get("href", "")
-        if not href or href in seen:
-            continue
-        seen.add(href)
-
-        h3 = card.find("h3")
-        if not h3:
-            continue
+    for h3 in soup.find_all("h3"):
         artist = h3.get_text(strip=True)
-
-        # Date: look for text with day+month pattern or Idag/Imorgon
-        all_text = [t.strip() for t in card.stripped_strings if t.strip()]
-        date_raw = None
-        for t in all_text:
-            tl = t.lower()
-            if tl in ("idag", "imorgon") or re.search(r"\d{1,2}\s+(jan|feb|mar|apr|maj|jun|jul|aug|sep|okt|nov|dec)", tl):
-                date_raw = t
-                break
-
-        if not date_raw:
+        if not artist:
             continue
+
+        container = h3.parent
+        date_raw = None
+        ticket_url = ""
+        event_url = ""
+
+        for _ in range(6):
+            if not container:
+                break
+            text = container.get_text(" ", strip=True)
+
+            date_match = re.search(
+                r"(idag|imorgon|\d{1,2}\s+(?:jan|feb|mar|apr|maj|jun|jul|aug|sep|okt|nov|dec)[a-z]*)",
+                text, re.IGNORECASE
+            )
+            if date_match:
+                date_raw = date_match.group(1)
+
+            event_a = container.find("a", href=re.compile(r"/event/"))
+            if event_a:
+                event_url = event_a.get("href", "")
+
+            ticket_a = container.find("a", href=re.compile(r"tickster|blackplanet|ticketmaster"))
+            if ticket_a:
+                ticket_url = ticket_a.get("href", "")
+
+            if date_raw and event_url:
+                break
+            container = container.parent
+
+        if not date_raw or not event_url:
+            continue
+
+        if event_url in seen:
+            continue
+        seen.add(event_url)
 
         day, month, year = parse_date(date_raw)
         if not day:
             continue
 
-        # Sub-venue (Stora Scen / Lilla Scen)
         sub_venue = ""
-        for t in all_text:
-            if "scen" in t.lower() or "kollektivet" in t.lower():
-                sub_venue = t
-                break
-
-        # Ticket link
-        ticket_a = card.find("a", href=re.compile(r"tickster|ticketmaster|blackplanet"))
-        ticket_url = ticket_a["href"] if ticket_a else BASE_URL + href
+        if container:
+            for t in container.stripped_strings:
+                t = t.strip()
+                if "scen" in t.lower() or "kollektivet livet" in t.lower():
+                    sub_venue = t
+                    break
 
         events.append({
             "artist": artist,
@@ -104,8 +148,8 @@ def scrape():
             "year": year,
             "venue": "Kollektivet Livet",
             "sub_venue": sub_venue,
-            "event_url": BASE_URL + href if href.startswith("/") else href,
-            "ticket_url": ticket_url,
+            "event_url": BASE_URL + event_url if event_url.startswith("/") else event_url,
+            "ticket_url": ticket_url or (BASE_URL + event_url if event_url.startswith("/") else event_url),
         })
 
     print(f"[Kollektivet Livet] Extracted {len(events)} events")
@@ -113,7 +157,7 @@ def scrape():
         json.dump(events, f, ensure_ascii=False, indent=2)
     print("Saved to events_kollektivet_livet.json")
     for e in events:
-        print(f"  {e['day']} {e['month']} {e['year']} | {e['artist']} ({e['sub_venue']})")
+        print(f"  {e['day']} {e['month']} {e['year']} | {e['artist']}")
 
 if __name__ == "__main__":
-    scrape()
+    asyncio.run(scrape())
