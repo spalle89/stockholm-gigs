@@ -1,0 +1,614 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Stockholm Gigs</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400&family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0d0d0f;
+      --surface: #13131a;
+      --border: rgba(255,255,255,0.07);
+      --accent: #e8c87a;
+      --accent2: #c45c3a;
+      --text: #e8e4dc;
+      --muted: #7a7670;
+      --pill-bg: rgba(232,200,122,0.10);
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 15px;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* ── Grain overlay ── */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+      pointer-events: none;
+      z-index: 0;
+      opacity: 0.5;
+    }
+
+    /* ── Header ── */
+    header {
+      position: relative;
+      z-index: 10;
+      padding: 48px 40px 36px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 24px;
+      flex-wrap: wrap;
+    }
+
+    .logo-area h1 {
+      font-family: 'Playfair Display', serif;
+      font-size: clamp(2.4rem, 5vw, 3.8rem);
+      font-weight: 900;
+      line-height: 1;
+      letter-spacing: -0.02em;
+      color: var(--text);
+    }
+
+    .logo-area h1 span {
+      color: var(--accent);
+      font-style: italic;
+    }
+
+    .logo-area p {
+      font-family: 'DM Mono', monospace;
+      font-size: 11px;
+      font-weight: 300;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-top: 8px;
+    }
+
+    .header-meta {
+      font-family: 'DM Mono', monospace;
+      font-size: 11px;
+      color: var(--muted);
+      text-align: right;
+      letter-spacing: 0.06em;
+    }
+
+    .header-meta strong {
+      display: block;
+      font-size: 22px;
+      font-weight: 500;
+      color: var(--text);
+      font-family: 'Playfair Display', serif;
+      letter-spacing: -0.01em;
+    }
+
+    /* ── Controls ── */
+    .controls {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      background: rgba(13,13,15,0.92);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border);
+      padding: 14px 40px;
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .controls label {
+      font-family: 'DM Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-right: 2px;
+    }
+
+    .filter-btn {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--muted);
+      font-family: 'DM Mono', monospace;
+      font-size: 11px;
+      letter-spacing: 0.06em;
+      padding: 6px 14px;
+      border-radius: 2px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .filter-btn:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    .filter-btn.active {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #0d0d0f;
+      font-weight: 500;
+    }
+
+    .search-wrap {
+      margin-left: auto;
+      position: relative;
+    }
+
+    .search-wrap input {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text);
+      font-family: 'DM Mono', monospace;
+      font-size: 12px;
+      padding: 7px 14px 7px 32px;
+      border-radius: 2px;
+      width: 200px;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+
+    .search-wrap input::placeholder { color: var(--muted); }
+    .search-wrap input:focus { border-color: var(--accent); }
+
+    .search-wrap svg {
+      position: absolute;
+      left: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--muted);
+    }
+
+    /* ── Main layout ── */
+    main {
+      position: relative;
+      z-index: 1;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 40px 40px 80px;
+    }
+
+    /* ── Month group ── */
+    .month-group {
+      margin-bottom: 52px;
+    }
+
+    .month-label {
+      font-family: 'Playfair Display', serif;
+      font-size: 11px;
+      font-weight: 400;
+      font-style: italic;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 18px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .month-label::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+
+    /* ── Day row ── */
+    .day-row {
+      display: grid;
+      grid-template-columns: 56px 1fr;
+      gap: 0 24px;
+      margin-bottom: 4px;
+    }
+
+    .day-col {
+      padding-top: 14px;
+      text-align: right;
+    }
+
+    .day-num {
+      font-family: 'Playfair Display', serif;
+      font-size: 28px;
+      font-weight: 700;
+      color: rgba(232,228,220,0.18);
+      line-height: 1;
+    }
+
+    .day-name {
+      font-family: 'DM Mono', monospace;
+      font-size: 9px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--muted);
+      opacity: 0.6;
+    }
+
+    .events-col {
+      border-left: 1px solid var(--border);
+      padding-left: 24px;
+      padding-bottom: 16px;
+    }
+
+    /* ── Event card ── */
+    .event-card {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      align-items: center;
+      gap: 16px;
+      padding: 14px 16px;
+      border-radius: 3px;
+      cursor: pointer;
+      transition: background 0.15s, transform 0.15s;
+      margin-bottom: 6px;
+      border: 1px solid transparent;
+      text-decoration: none;
+      color: inherit;
+    }
+
+    .event-card:hover {
+      background: var(--surface);
+      border-color: var(--border);
+      transform: translateX(3px);
+    }
+
+    .event-card:last-child { margin-bottom: 0; }
+
+    .event-main {}
+
+    .event-title {
+      font-family: 'Playfair Display', serif;
+      font-size: 17px;
+      font-weight: 700;
+      line-height: 1.2;
+      color: var(--text);
+      margin-bottom: 4px;
+    }
+
+    .event-meta {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .venue-tag {
+      font-family: 'DM Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 0.08em;
+      color: var(--accent);
+      text-transform: uppercase;
+    }
+
+    .event-time {
+      font-family: 'DM Mono', monospace;
+      font-size: 10px;
+      color: var(--muted);
+    }
+
+    .genre-pill {
+      font-family: 'DM Mono', monospace;
+      font-size: 9px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      background: var(--pill-bg);
+      color: var(--accent);
+      padding: 2px 8px;
+      border-radius: 100px;
+      border: 1px solid rgba(232,200,122,0.15);
+    }
+
+    .event-right {
+      text-align: right;
+      flex-shrink: 0;
+    }
+
+    .event-price {
+      font-family: 'DM Mono', monospace;
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .sold-out {
+      font-family: 'DM Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--accent2);
+    }
+
+    /* ── Today highlight ── */
+    .day-row.today .day-num {
+      color: var(--accent);
+      opacity: 1;
+    }
+
+    .day-row.today .events-col {
+      border-left-color: var(--accent);
+    }
+
+    /* ── Empty state ── */
+    .empty {
+      text-align: center;
+      padding: 80px 20px;
+      font-family: 'Playfair Display', serif;
+      font-style: italic;
+      color: var(--muted);
+      font-size: 18px;
+    }
+
+    /* ── Footer ── */
+    footer {
+      position: relative;
+      z-index: 1;
+      border-top: 1px solid var(--border);
+      padding: 24px 40px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    footer p {
+      font-family: 'DM Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    .update-badge {
+      font-family: 'DM Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #4caf6e;
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(0.8); }
+    }
+
+    /* ── Responsive ── */
+    @media (max-width: 640px) {
+      header, .controls, main, footer { padding-left: 20px; padding-right: 20px; }
+      .day-row { grid-template-columns: 40px 1fr; gap: 0 14px; }
+      .events-col { padding-left: 14px; }
+      .event-card { grid-template-columns: 1fr; }
+      .event-right { display: none; }
+    }
+
+    /* ── Fade-in animation ── */
+    .month-group {
+      animation: fadeUp 0.4s ease both;
+    }
+    .month-group:nth-child(2) { animation-delay: 0.05s; }
+    .month-group:nth-child(3) { animation-delay: 0.10s; }
+    .month-group:nth-child(4) { animation-delay: 0.15s; }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(16px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo-area">
+    <h1>Stockholm <span>Gigs</span></h1>
+    <p>Live music across the city — updated weekly</p>
+  </div>
+  <div class="header-meta">
+    <strong id="event-count">—</strong>
+    upcoming concerts
+  </div>
+</header>
+
+<div class="controls">
+  <label>Venue</label>
+  <button class="filter-btn active" data-venue="all">All</button>
+  <button class="filter-btn" data-venue="Debaser">Debaser</button>
+  <button class="filter-btn" data-venue="Nalen">Nalen</button>
+  <button class="filter-btn" data-venue="Fasching">Fasching</button>
+  <button class="filter-btn" data-venue="Cirkus">Cirkus</button>
+  <button class="filter-btn" data-venue="Södra Teatern">Södra</button>
+  <button class="filter-btn" data-venue="Berns">Berns</button>
+  <button class="filter-btn" data-venue="Fållan">Fållan</button>
+  <button class="filter-btn" data-venue="Brygghuset">Brygghuset</button>
+  <button class="filter-btn" data-venue="Annexet">Annexet</button>
+  <button class="filter-btn" data-venue="B-K">B-K</button>
+  <button class="filter-btn" data-venue="Kollektivet Livet">K. Livet</button>
+  <div class="search-wrap">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+    <input type="text" id="search" placeholder="Search artist..." />
+  </div>
+</div>
+
+<main id="calendar"></main>
+
+<footer>
+  <p>Stockholm Gigs &mdash; 10 venues</p>
+  <div class="update-badge">
+    <div class="dot"></div>
+    Updated weekly · Last scan: 2 Mar 2026
+  </div>
+</footer>
+
+<script>
+// ─────────────────────────────────────────────
+// SUPABASE CONFIG
+// ─────────────────────────────────────────────
+const SUPABASE_URL = 'https://kfqipfsywnecuceziiiy.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtmcWlwZnN5d25lY3VjZXppaWl5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI2ODkwOTksImV4cCI6MjA4ODI2NTA5OX0.HSQXo8QhfzkS2D9s3MGpIJ4WCi-UhaIlegr6wtNtqOU';
+
+// ─────────────────────────────────────────────
+// RENDERING
+// ─────────────────────────────────────────────
+const DAYS = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+
+let allEvents = [];
+let activeVenue = 'all';
+let searchQuery = '';
+
+function renderCalendar() {
+  const cal = document.getElementById('calendar');
+
+  const today = new Date().toISOString().slice(0,10);
+
+  // Filter
+  let filtered = allEvents.filter(e => {
+    const venueMatch = activeVenue === 'all' || e.venue === activeVenue;
+    const searchMatch = !searchQuery
+      || e.artist.toLowerCase().includes(searchQuery)
+      || e.venue.toLowerCase().includes(searchQuery);
+    return venueMatch && searchMatch;
+  });
+
+  document.getElementById('event-count').textContent = filtered.length;
+
+  if (filtered.length === 0) {
+    cal.innerHTML = '<p class="empty">No concerts found — try a different filter.</p>';
+    return;
+  }
+
+  // Group by month then by date
+  const byMonth = {};
+  filtered.forEach(e => {
+    const d = new Date(e.date + 'T12:00:00');
+    const monthKey = `${d.getFullYear()}-${String(d.getMonth()).padStart(2,'0')}`;
+    if (!byMonth[monthKey]) byMonth[monthKey] = { label: MONTHS[d.getMonth()] + ' ' + d.getFullYear(), days: {} };
+    if (!byMonth[monthKey].days[e.date]) byMonth[monthKey].days[e.date] = [];
+    byMonth[monthKey].days[e.date].push(e);
+  });
+
+  let html = '';
+  Object.keys(byMonth).sort().forEach(monthKey => {
+    const month = byMonth[monthKey];
+    html += `<div class="month-group"><div class="month-label">${month.label}</div>`;
+    Object.entries(month.days).sort().forEach(([dateStr, dayEvents]) => {
+      const d = new Date(dateStr + 'T12:00:00');
+      const isToday = dateStr === today;
+      html += `<div class="day-row ${isToday ? 'today' : ''}">
+        <div class="day-col">
+          <div class="day-num">${d.getDate()}</div>
+          <div class="day-name">${DAYS[d.getDay()]}</div>
+        </div>
+        <div class="events-col">`;
+      dayEvents.forEach(ev => {
+        const url = ev.ticket_url || ev.event_url || '';
+        const cardInner = `
+          <div class="event-main">
+            <div class="event-title">${ev.artist}</div>
+            <div class="event-meta">
+              <span class="venue-tag">${ev.venue}</span>
+              ${ev.sub_venue ? `<span class="genre-pill">${ev.sub_venue}</span>` : ''}
+              ${ev.genre ? `<span class="genre-pill">${ev.genre}</span>` : ''}
+            </div>
+          </div>
+          <div class="event-right">
+            ${url ? '<span class="event-price">Tickets →</span>' : ''}
+          </div>`;
+        html += url
+          ? `<a class="event-card" href="${url}" target="_blank" rel="noopener">${cardInner}</a>`
+          : `<div class="event-card">${cardInner}</div>`;
+      });
+      html += `</div></div>`;
+    });
+    html += `</div>`;
+  });
+
+  cal.innerHTML = html;
+}
+
+function showLoading() {
+  document.getElementById('calendar').innerHTML = '<p class="empty">Loading events…</p>';
+}
+
+function showError(msg) {
+  document.getElementById('calendar').innerHTML = `<p class="empty">⚠ ${msg}</p>`;
+}
+
+// ─────────────────────────────────────────────
+// FETCH FROM SUPABASE
+// ─────────────────────────────────────────────
+async function loadEvents() {
+  showLoading();
+  const today = new Date().toISOString().slice(0,10);
+
+  try {
+    // Fetch all upcoming events, ordered by date
+    const res = await fetch(
+      `${SUPABASE_URL}/rest/v1/events?date=gte.${today}&order=date.asc,artist.asc&limit=2000`,
+      { headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` } }
+    );
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    allEvents = await res.json();
+
+    // Update footer with today's date
+    const lastScan = document.querySelector('.update-badge');
+    if (lastScan) {
+      const d = new Date();
+      lastScan.innerHTML = `<div class="dot"></div>Updated weekly · Last scan: ${d.getDate()} ${MONTHS[d.getMonth()].slice(0,3)} ${d.getFullYear()}`;
+    }
+
+    renderCalendar();
+  } catch (err) {
+    showError('Could not load events. Please try again later.');
+    console.error(err);
+  }
+}
+
+// ── Filter buttons ──
+document.querySelectorAll('.filter-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    activeVenue = btn.dataset.venue;
+    renderCalendar();
+  });
+});
+
+// ── Search ──
+document.getElementById('search').addEventListener('input', e => {
+  searchQuery = e.target.value.toLowerCase().trim();
+  renderCalendar();
+});
+
+// ── Init ──
+loadEvents();
+</script>
+</body>
+</html>
