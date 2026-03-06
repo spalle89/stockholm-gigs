@@ -400,6 +400,31 @@
       50% { opacity: 0.5; transform: scale(0.8); }
     }
 
+    /* ── New badge ── */
+    .new-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(232,200,122,0.15);
+      border: 1px solid rgba(232,200,122,0.25);
+      color: var(--accent);
+      font-family: 'DM Mono', monospace;
+      font-size: 9px;
+      font-weight: 500;
+      min-width: 16px;
+      height: 16px;
+      padding: 0 4px;
+      border-radius: 100px;
+      margin-left: 5px;
+      vertical-align: middle;
+    }
+
+    .filter-btn.active .new-badge {
+      background: rgba(13,13,15,0.25);
+      border-color: rgba(13,13,15,0.3);
+      color: #0d0d0f;
+    }
+
     /* ── Responsive ── */
     @media (max-width: 640px) {
       header, .controls, main, footer { padding-left: 20px; padding-right: 20px; }
@@ -439,7 +464,7 @@
 <div class="controls">
   <label>Venue</label>
   <button class="filter-btn active" data-venue="all">All</button>
-  <button class="filter-btn" data-venue="new">✦ New</button>
+  <button class="filter-btn" data-venue="new">✦ New <span class="new-badge" id="new-count"></span></button>
   <button class="filter-btn" data-venue="Debaser">Debaser</button>
   <button class="filter-btn" data-venue="Nalen">Nalen</button>
   <button class="filter-btn" data-venue="Fasching">Fasching</button>
@@ -583,6 +608,14 @@ async function loadEvents() {
     );
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     allEvents = await res.json();
+
+    // Update new-events badge count
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+    const sevenDaysAgoStr = sevenDaysAgo.toISOString().slice(0, 10);
+    const newCount = allEvents.filter(e => e.first_seen && e.first_seen >= sevenDaysAgoStr).length;
+    const newBadge = document.getElementById('new-count');
+    if (newBadge) newBadge.textContent = newCount > 0 ? newCount : '';
 
     // Update footer with today's date
     const lastScan = document.querySelector('.update-badge');

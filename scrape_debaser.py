@@ -50,10 +50,15 @@ async def scrape_debaser():
             continue
 
         date_parts = [d.get_text(strip=True) for d in date_hero.select("div.b1-data")]
-        # date_parts = [day_num, month, year, weekday] or similar
         day = next((p for p in date_parts if p.isdigit() and len(p) <= 2), "")
-        month = next((p for p in date_parts if re.match(r'^[A-Za-z]{3,}$', p)), "")
+        month_raw = next((p for p in date_parts if re.match(r'^[A-Za-z]{3,}$', p)), "")
         year = next((p for p in date_parts if p.isdigit() and len(p) == 4), "")
+        MONTH_EXPAND = {
+            "Jan": "January", "Feb": "February", "Mar": "March", "Apr": "April",
+            "May": "May", "Jun": "June", "Jul": "July", "Aug": "August",
+            "Sep": "September", "Oct": "October", "Nov": "November", "Dec": "December"
+        }
+        month = MONTH_EXPAND.get(month_raw[:3].capitalize(), month_raw)
         date_str = f"{day} {month} {year}".strip()
 
         # Artist name
@@ -66,7 +71,8 @@ async def scrape_debaser():
 
         # Venue: inside .event-date-hero.border-copy
         venue_el = item.select_one("div.event-date-hero.border-copy div.b2")
-        venue = venue_el.get_text(strip=True) if venue_el else "Debaser"
+        sub_venue = venue_el.get_text(strip=True) if venue_el else ""
+        venue = "Debaser"
 
         # Genre: inside .event-date-hero.border-genre
         genre_el = item.select_one("div.event-date-hero.border-genre div.b2")
@@ -89,6 +95,7 @@ async def scrape_debaser():
                 "month": month,
                 "year": year,
                 "venue": venue,
+                "sub_venue": sub_venue,
                 "genre": genre,
                 "event_url": event_url,
                 "ticket_url": ticket_url,
