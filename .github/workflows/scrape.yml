@@ -38,7 +38,9 @@ jobs:
           python scrape_cirkus.py
 
       - name: Merge events
-        run: python merge_events.py
+        run: |
+          python merge_events.py
+          python -c "import json; events=json.load(open('events_all.json')); assert len(events)>0, 'No events merged!'"
 
       - name: Push to Supabase
         env:

@@ -57,6 +57,10 @@ def main():
 
     print(f"Loaded {len(events)} events from events_all.json")
 
+    if len(events) == 0:
+        print("✗ events_all.json is empty — aborting to protect existing data")
+        return
+
     # Fetch existing first_seen dates before clearing
     print("Fetching existing first_seen dates...")
     existing = get_existing_first_seen()
