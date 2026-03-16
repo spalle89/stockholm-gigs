@@ -425,6 +425,131 @@
       color: #0d0d0f;
     }
 
+    /* ── Subscribe button ── */
+    .subscribe-btn {
+      background: transparent;
+      border: 1px solid var(--accent);
+      color: var(--accent);
+      font-family: 'DM Mono', monospace;
+      font-size: 11px;
+      letter-spacing: 0.06em;
+      padding: 6px 14px;
+      border-radius: 2px;
+      cursor: pointer;
+      transition: all 0.15s;
+      margin-left: auto;
+    }
+
+    .subscribe-btn:hover {
+      background: var(--accent);
+      color: #0d0d0f;
+    }
+
+    /* ── Modal ── */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.7);
+      z-index: 100;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .modal-overlay.open {
+      display: flex;
+    }
+
+    .modal {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 36px 32px 32px;
+      width: 100%;
+      max-width: 400px;
+      position: relative;
+    }
+
+    .modal-close {
+      position: absolute;
+      top: 14px;
+      right: 16px;
+      background: transparent;
+      border: none;
+      color: var(--muted);
+      font-size: 16px;
+      cursor: pointer;
+      line-height: 1;
+      padding: 4px;
+      transition: color 0.15s;
+    }
+
+    .modal-close:hover { color: var(--text); }
+
+    .modal h2 {
+      font-family: 'Playfair Display', serif;
+      font-size: 22px;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 8px;
+    }
+
+    .modal p {
+      font-family: 'DM Mono', monospace;
+      font-size: 11px;
+      color: var(--muted);
+      letter-spacing: 0.04em;
+      margin-bottom: 20px;
+    }
+
+    .modal input[type="email"] {
+      width: 100%;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      color: var(--text);
+      font-family: 'DM Mono', monospace;
+      font-size: 13px;
+      padding: 10px 14px;
+      border-radius: 2px;
+      outline: none;
+      transition: border-color 0.15s;
+      margin-bottom: 12px;
+      display: block;
+    }
+
+    .modal input[type="email"]::placeholder { color: var(--muted); }
+    .modal input[type="email"]:focus { border-color: var(--accent); }
+
+    .modal-submit {
+      width: 100%;
+      background: var(--accent);
+      border: none;
+      color: #0d0d0f;
+      font-family: 'DM Mono', monospace;
+      font-size: 12px;
+      font-weight: 500;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      padding: 10px 14px;
+      border-radius: 2px;
+      cursor: pointer;
+      transition: opacity 0.15s;
+    }
+
+    .modal-submit:hover { opacity: 0.85; }
+    .modal-submit:disabled { opacity: 0.5; cursor: default; }
+
+    .modal-msg {
+      font-family: 'DM Mono', monospace;
+      font-size: 11px;
+      margin-top: 12px;
+      min-height: 16px;
+      letter-spacing: 0.04em;
+    }
+
+    .modal-msg.success { color: #4caf6e; }
+    .modal-msg.error { color: var(--accent2); }
+
     /* ── Responsive ── */
     @media (max-width: 640px) {
       header, .controls, main, footer { padding-left: 20px; padding-right: 20px; }
@@ -476,6 +601,7 @@
   <button class="filter-btn" data-venue="Annexet">Annexet</button>
   <button class="filter-btn" data-venue="B-K">B-K</button>
   <button class="filter-btn" data-venue="Kollektivet Livet">K. Livet</button>
+  <button class="subscribe-btn" id="subscribe-btn">✉ Subscribe</button>
   <div class="search-wrap">
     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
     <input type="text" id="search" placeholder="Search artist..." />
@@ -491,6 +617,17 @@
     Updated weekly · Last scan: 2 Mar 2026
   </div>
 </footer>
+
+<div class="modal-overlay" id="modal-overlay">
+  <div class="modal">
+    <button class="modal-close" id="modal-close">✕</button>
+    <h2>Weekly digest</h2>
+    <p>New Stockholm gigs delivered every Monday.</p>
+    <input type="email" id="sub-email" placeholder="your@email.com" />
+    <button class="modal-submit" id="modal-submit">Subscribe</button>
+    <div class="modal-msg" id="modal-msg"></div>
+  </div>
+</div>
 
 <script>
 // ─────────────────────────────────────────────
@@ -645,6 +782,69 @@ document.querySelectorAll('.filter-btn').forEach(btn => {
 document.getElementById('search').addEventListener('input', e => {
   searchQuery = e.target.value.toLowerCase().trim();
   renderCalendar();
+});
+
+// ── Subscribe modal ──
+const overlay = document.getElementById('modal-overlay');
+const subBtn = document.getElementById('subscribe-btn');
+const closeBtn = document.getElementById('modal-close');
+const submitBtn = document.getElementById('modal-submit');
+const emailInput = document.getElementById('sub-email');
+const msgEl = document.getElementById('modal-msg');
+
+function openModal() {
+  overlay.classList.add('open');
+  emailInput.focus();
+}
+
+function closeModal() {
+  overlay.classList.remove('open');
+  msgEl.textContent = '';
+  msgEl.className = 'modal-msg';
+  emailInput.value = '';
+  submitBtn.disabled = false;
+}
+
+subBtn.addEventListener('click', openModal);
+closeBtn.addEventListener('click', closeModal);
+overlay.addEventListener('click', e => { if (e.target === overlay) closeModal(); });
+
+submitBtn.addEventListener('click', async () => {
+  const email = emailInput.value.trim();
+  if (!email) return;
+
+  submitBtn.disabled = true;
+  msgEl.textContent = '';
+  msgEl.className = 'modal-msg';
+
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/subscribers`, {
+      method: 'POST',
+      headers: {
+        'apikey': SUPABASE_ANON_KEY,
+        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+        'Content-Type': 'application/json',
+        'Prefer': 'return=minimal',
+      },
+      body: JSON.stringify({ email }),
+    });
+
+    if (res.status === 201) {
+      msgEl.textContent = '✓ You\'re subscribed!';
+      msgEl.classList.add('success');
+    } else if (res.status === 409) {
+      msgEl.textContent = 'You\'re already subscribed!';
+      msgEl.classList.add('error');
+    } else {
+      msgEl.textContent = `Something went wrong (${res.status}). Please try again.`;
+      msgEl.classList.add('error');
+    }
+  } catch {
+    msgEl.textContent = 'Network error. Please try again.';
+    msgEl.classList.add('error');
+  }
+
+  submitBtn.disabled = false;
 });
 
 // ── Init ──
