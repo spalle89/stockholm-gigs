@@ -1,13 +1,21 @@
-import requests
-from bs4 import BeautifulSoup
+import asyncio
 import json
 import re
-from datetime import datetime
+from playwright.async_api import async_playwright
 
 MONTH_MAP = {
-    "january": "January", "february": "February", "march": "March", "april": "April",
-    "may": "May", "june": "June", "july": "July", "august": "August",
-    "september": "September", "october": "October", "november": "November", "december": "December"
+    "january": "January",   "jan": "January",
+    "february": "February", "feb": "February",
+    "march": "March",       "mar": "March",
+    "april": "April",       "apr": "April",
+    "may": "May",
+    "june": "June",         "jun": "June",
+    "july": "July",         "jul": "July",
+    "august": "August",     "aug": "August",
+    "september": "September","sep": "September",
+    "october": "October",   "oct": "October",
+    "november": "November", "nov": "November",
+    "december": "December", "dec": "December",
 }
 
 EVENT_TYPES = {"Concert", "Club", "Festival", "Event", "Tickets", "Club Night", "Live"}
@@ -18,7 +26,6 @@ VENUES = {
 }
 
 def parse_date(date_str):
-    """Parse 'March 6, 2026' -> (6, 'March', 2026)"""
     date_str = date_str.strip()
     m = re.match(r"(\w+)\s+(\d{1,2}),?\s+(\d{4})", date_str)
     if not m:
@@ -29,10 +36,28 @@ def parse_date(date_str):
         return None, None, None
     return day, month_en, year
 
-def scrape_venue(venue_name, url):
-    resp = requests.get(url, headers={"User-Agent": "Mozilla/5.0"})
-    resp.encoding = "utf-8"
-    soup = BeautifulSoup(resp.text, "html.parser")
+async def scrape_venue(page, venue_name, url):
+    print(f"Loading {venue_name}...")
+    await page.goto(url, wait_until="domcontentloaded")
+    await page.wait_for_timeout(3000)
+
+    # Scroll to load all events
+    prev_height = 0
+    attempts = 0
+    while attempts < 40:
+        curr_height = await page.evaluate("document.body.scrollHeight")
+        if curr_height == prev_height:
+            break
+        prev_height = curr_height
+        await page.evaluate("window.scrollBy(0, 800)")
+        await page.wait_for_timeout(600)
+        attempts += 1
+
+    print(f"  Scrolled {attempts} times")
+
+    from bs4 import BeautifulSoup
+    html = await page.content()
+    soup = BeautifulSoup(html, "html.parser")
 
     events = []
     seen = set()
@@ -42,7 +67,6 @@ def scrape_venue(venue_name, url):
         if href in seen:
             continue
 
-        # Artist: prefer h3, fallback h4, skip h2 event types
         artist = ""
         for tag in ["h3", "h4", "h2"]:
             el = a.find(tag)
@@ -54,10 +78,14 @@ def scrape_venue(venue_name, url):
         if not artist:
             continue
 
-        # Date
         texts = [t.strip() for t in a.stripped_strings if t.strip()]
         date_raw = next(
-            (t for t in texts if re.match(r"(January|February|March|April|May|June|July|August|September|October|November|December)", t)),
+            (t for t in texts if re.match(
+                r"(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec"
+                r"|January|February|March|April|June|July|August"
+                r"|September|October|November|December)",
+                t, re.IGNORECASE
+            )),
             ""
         )
         if not date_raw:
@@ -67,11 +95,15 @@ def scrape_venue(venue_name, url):
         if not day:
             continue
 
-        # Sub-venue (e.g. Fållan / BAR15 / Lilla Fållan)
         sub_venue = ""
         for t in texts:
-            if t not in EVENT_TYPES and t != artist and not re.match(r"(January|February)", t):
-                if any(v in t for v in ["Fållan", "BAR", "Lilla", "B-K", "Stora", "Lilla"]):
+            if t not in EVENT_TYPES and t != artist and not re.match(
+                r"(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec"
+                r"|January|February|March|April|June|July|August"
+                r"|September|October|November|December)",
+                t, re.IGNORECASE
+            ):
+                if any(v in t for v in ["Fållan", "BAR", "Lilla", "B-K", "Stora"]):
                     sub_venue = t
                     break
 
@@ -94,17 +126,21 @@ def scrape_venue(venue_name, url):
 
     return events
 
-def scrape():
-    for venue_name, url in VENUES.items():
-        events = scrape_venue(venue_name, url)
-        fname = f"events_{venue_name.lower().replace('-', '_').replace('å', 'a').replace('ä', 'a').replace('ö', 'o')}.json"
-        # Use consistent filenames
-        fname = "events_fallan.json" if venue_name == "Fållan" else "events_bk.json"
-        with open(fname, "w", encoding="utf-8") as f:
-            json.dump(events, f, ensure_ascii=False, indent=2)
-        print(f"[{venue_name}] Extracted {len(events)} events → {fname}")
-        for e in events:
-            print(f"  {e['day']} {e['month']} {e['year']} | {e['artist']}")
+async def scrape():
+    async with async_playwright() as p:
+        browser = await p.chromium.launch(headless=True)
+        page = await browser.new_page()
+
+        for venue_name, url in VENUES.items():
+            events = await scrape_venue(page, venue_name, url)
+            fname = "events_fallan.json" if venue_name == "Fållan" else "events_bk.json"
+            with open(fname, "w", encoding="utf-8") as f:
+                json.dump(events, f, ensure_ascii=False, indent=2)
+            print(f"[{venue_name}] Extracted {len(events)} events → {fname}")
+            for e in events:
+                print(f"  {e['day']} {e['month']} {e['year']} | {e['artist']}")
+
+        await browser.close()
 
 if __name__ == "__main__":
-    scrape()
+    asyncio.run(scrape())
