@@ -550,6 +550,24 @@
     .modal-msg.success { color: #4caf6e; }
     .modal-msg.error { color: var(--accent2); }
 
+    /* ── Bookmark icon ── */
+    .bookmark-btn {
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      font-size: 15px;
+      color: var(--muted);
+      padding: 4px 6px;
+      line-height: 1;
+      transition: color 0.15s, transform 0.1s;
+      flex-shrink: 0;
+      position: relative;
+      z-index: 1;
+    }
+
+    .bookmark-btn:hover { color: var(--accent); transform: scale(1.15); }
+    .bookmark-btn.saved { color: var(--accent); }
+
     /* ── Responsive ── */
     @media (max-width: 640px) {
       header, .controls, main, footer { padding-left: 20px; padding-right: 20px; }
@@ -590,6 +608,7 @@
   <label>Venue</label>
   <button class="filter-btn active" data-venue="all">All</button>
   <button class="filter-btn" data-venue="new">✦ New <span class="new-badge" id="new-count"></span></button>
+  <button class="filter-btn" data-venue="saved">★ My List</button>
   <button class="filter-btn" data-venue="Debaser">Debaser</button>
   <button class="filter-btn" data-venue="Nalen">Nalen</button>
   <button class="filter-btn" data-venue="Fasching">Fasching</button>
@@ -646,6 +665,41 @@ let allEvents = [];
 let activeVenue = 'all';
 let searchQuery = '';
 
+// ─────────────────────────────────────────────
+// FAVOURITES (localStorage)
+// ─────────────────────────────────────────────
+const FAV_KEY = 'stockholm-gigs-favourites';
+
+function loadFavourites() {
+  try { return JSON.parse(localStorage.getItem(FAV_KEY)) || []; }
+  catch { return []; }
+}
+
+function saveFavourites(favs) {
+  localStorage.setItem(FAV_KEY, JSON.stringify(favs));
+}
+
+function favKey(ev) {
+  return `${ev.venue}::${ev.artist}::${ev.date}`;
+}
+
+function isSaved(ev) {
+  return loadFavourites().some(f => f.key === favKey(ev));
+}
+
+function toggleFavourite(ev) {
+  const key = favKey(ev);
+  let favs = loadFavourites();
+  const idx = favs.findIndex(f => f.key === key);
+  if (idx === -1) {
+    favs.push({ key, artist: ev.artist, date: ev.date, venue: ev.venue,
+                event_url: ev.ticket_url || ev.event_url || '' });
+  } else {
+    favs.splice(idx, 1);
+  }
+  saveFavourites(favs);
+}
+
 function renderCalendar() {
   const cal = document.getElementById('calendar');
 
@@ -657,19 +711,41 @@ function renderCalendar() {
   sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
   const sevenDaysAgoStr = sevenDaysAgo.toISOString().slice(0, 10);
 
-  let filtered = allEvents.filter(e => {
-    const venueMatch = activeVenue === 'all' || e.venue === activeVenue
-      || (activeVenue === 'new' && e.first_seen && e.first_seen >= sevenDaysAgoStr);
-    const searchMatch = !searchQuery
-      || e.artist.toLowerCase().includes(searchQuery)
-      || e.venue.toLowerCase().includes(searchQuery);
-    return venueMatch && searchMatch;
-  });
+  const favourites = loadFavourites();
+  const savedKeys = new Set(favourites.map(f => f.key));
+
+  let filtered;
+  if (activeVenue === 'saved') {
+    // Show saved events, reconstructing from allEvents where possible, else from localStorage
+    const savedFromAll = allEvents.filter(e => savedKeys.has(favKey(e)));
+    const savedFromAllKeys = new Set(savedFromAll.map(e => favKey(e)));
+    // Include any saved events not in allEvents (past events)
+    const extra = favourites
+      .filter(f => !savedFromAllKeys.has(f.key))
+      .map(f => ({ artist: f.artist, date: f.date, venue: f.venue,
+                   ticket_url: f.event_url, event_url: f.event_url }));
+    filtered = [...savedFromAll, ...extra].filter(e => {
+      return !searchQuery
+        || e.artist.toLowerCase().includes(searchQuery)
+        || e.venue.toLowerCase().includes(searchQuery);
+    });
+  } else {
+    filtered = allEvents.filter(e => {
+      const venueMatch = activeVenue === 'all' || e.venue === activeVenue
+        || (activeVenue === 'new' && e.first_seen && e.first_seen >= sevenDaysAgoStr);
+      const searchMatch = !searchQuery
+        || e.artist.toLowerCase().includes(searchQuery)
+        || e.venue.toLowerCase().includes(searchQuery);
+      return venueMatch && searchMatch;
+    });
+  }
 
   document.getElementById('event-count').textContent = filtered.length;
 
   if (filtered.length === 0) {
-    cal.innerHTML = '<p class="empty">No concerts found — try a different filter.</p>';
+    cal.innerHTML = activeVenue === 'saved'
+      ? '<p class="empty">No saved events yet — click ★ on any event to save it.</p>'
+      : '<p class="empty">No concerts found — try a different filter.</p>';
     return;
   }
 
@@ -698,6 +774,8 @@ function renderCalendar() {
         <div class="events-col">`;
       dayEvents.forEach(ev => {
         const url = ev.ticket_url || ev.event_url || '';
+        const key = favKey(ev);
+        const saved = savedKeys.has(key);
         const cardInner = `
           <div class="event-main">
             <div class="event-title">${ev.artist}</div>
@@ -709,6 +787,7 @@ function renderCalendar() {
           </div>
           <div class="event-right">
             ${url ? '<span class="event-price">Tickets →</span>' : ''}
+            <button class="bookmark-btn${saved ? ' saved' : ''}" data-key="${key}" title="${saved ? 'Remove from My List' : 'Save to My List'}">${saved ? '★' : '☆'}</button>
           </div>`;
         html += url
           ? `<a class="event-card" href="${url}" target="_blank" rel="noopener">${cardInner}</a>`
@@ -781,6 +860,20 @@ document.querySelectorAll('.filter-btn').forEach(btn => {
 // ── Search ──
 document.getElementById('search').addEventListener('input', e => {
   searchQuery = e.target.value.toLowerCase().trim();
+  renderCalendar();
+});
+
+// ── Bookmark clicks (delegated) ──
+document.getElementById('calendar').addEventListener('click', e => {
+  const btn = e.target.closest('.bookmark-btn');
+  if (!btn) return;
+  e.preventDefault();
+  e.stopPropagation();
+  const key = btn.dataset.key;
+  const ev = allEvents.find(e => favKey(e) === key)
+    || loadFavourites().find(f => f.key === key);
+  if (!ev) return;
+  toggleFavourite(ev);
   renderCalendar();
 });
 
