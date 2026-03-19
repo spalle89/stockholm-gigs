@@ -426,6 +426,14 @@
     }
 
     /* ── Subscribe button ── */
+    .right-controls {
+      margin-left: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      align-items: stretch;
+    }
+
     .subscribe-btn {
       background: transparent;
       border: 1px solid var(--accent);
@@ -437,11 +445,22 @@
       border-radius: 2px;
       cursor: pointer;
       transition: all 0.15s;
-      margin-left: auto;
     }
 
     .subscribe-btn:hover {
       background: var(--accent);
+      color: #0d0d0f;
+    }
+
+    .filter-btn[data-venue="saved"] {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    .filter-btn[data-venue="saved"]:hover,
+    .filter-btn[data-venue="saved"].active {
+      background: var(--accent);
+      border-color: var(--accent);
       color: #0d0d0f;
     }
 
@@ -619,8 +638,10 @@
   <button class="filter-btn" data-venue="Annexet">Annexet</button>
   <button class="filter-btn" data-venue="B-K">B-K</button>
   <button class="filter-btn" data-venue="Kollektivet Livet">K. Livet</button>
-  <button class="filter-btn" data-venue="saved">★ My List</button>
-  <button class="subscribe-btn" id="subscribe-btn">✉ Subscribe</button>
+  <div class="right-controls">
+    <button class="subscribe-btn" id="subscribe-btn">✉ Subscribe</button>
+    <button class="filter-btn" data-venue="saved">★ My List</button>
+  </div>
   <div class="search-wrap">
     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
     <input type="text" id="search" placeholder="Search artist..." />
