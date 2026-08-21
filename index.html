@@ -32,16 +32,6 @@
       overflow-x: hidden;
     }
 
-    /* ── Grain overlay ── */
-    body::before {
-      content: '';
-      position: fixed;
-      inset: 0;
-      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
-      pointer-events: none;
-      z-index: 0;
-      opacity: 0.5;
-    }
 
     /* ── Header ── */
     header {
@@ -596,18 +586,6 @@
       .event-right { display: none; }
     }
 
-    /* ── Fade-in animation ── */
-    .month-group {
-      animation: fadeUp 0.4s ease both;
-    }
-    .month-group:nth-child(2) { animation-delay: 0.05s; }
-    .month-group:nth-child(3) { animation-delay: 0.10s; }
-    .month-group:nth-child(4) { animation-delay: 0.15s; }
-
-    @keyframes fadeUp {
-      from { opacity: 0; transform: translateY(16px); }
-      to   { opacity: 1; transform: translateY(0); }
-    }
   </style>
 </head>
 <body>
