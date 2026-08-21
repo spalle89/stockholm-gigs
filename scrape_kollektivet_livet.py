@@ -43,8 +43,8 @@ async def scrape():
         page = await browser.new_page()
 
         print("Loading Kollektivet Livet program page...")
-        await page.goto(URL, wait_until="domcontentloaded")
-        await page.wait_for_timeout(3000)
+        await page.goto(URL, wait_until="networkidle")
+        await page.wait_for_timeout(1000)
 
         # Scroll incrementally and click "LÄS IN FLER" whenever it appears
         clicks = 0
