@@ -32,8 +32,17 @@ async def get_event_links(page):
     pg = 1
     while url:
         print(f"  Collecting page {pg}: {url}")
-        await page.goto(url, wait_until="domcontentloaded")
+        resp = await page.goto(url, wait_until="domcontentloaded")
+        if resp and resp.status == 429:
+            print(f"  [Cirkus] ⚠ HTTP 429 Too Many Requests (Vercel Security Checkpoint / Anti-bot). Access blocked.")
+            break
+
         await page.wait_for_timeout(1500)
+
+        title = await page.title()
+        if "Security Checkpoint" in title or "Checkpoint" in title:
+            print("  [Cirkus] ⚠ Vercel Security Checkpoint challenge page encountered.")
+            break
 
         cards = await page.eval_on_selector_all(
             "a[href*='/sv/evenemang/']",
@@ -47,13 +56,12 @@ async def get_event_links(page):
             if href not in [l[0] for l in all_links]:
                 all_links.append((href, text))
 
-        next_link = await page.query_selector("a[href*='/page/']")
-        next_url = None
         # Find "Nästa sida" link
         nav_links = await page.eval_on_selector_all(
             "a[href*='/page/']",
             "els => els.map(e => ({href: e.getAttribute('href'), text: e.innerText.trim()}))"
         )
+        next_url = None
         for nl in nav_links:
             if "ста" in nl["text"] or "NÄSTA" in nl["text"].upper():
                 next_url = BASE_URL + nl["href"] if nl["href"].startswith("/") else nl["href"]
@@ -66,7 +74,11 @@ async def get_event_links(page):
 async def get_event_date(page, href):
     """Visit event page and extract date."""
     url = BASE_URL + href if href.startswith("/") else href
-    await page.goto(url, wait_until="domcontentloaded")
+    resp = await page.goto(url, wait_until="domcontentloaded")
+    if resp and resp.status == 429:
+        print(f"    ⚠ HTTP 429 for {url}")
+        return None, None
+
     await page.wait_for_timeout(1500)
 
     text = await page.inner_text("body")
@@ -93,25 +105,26 @@ async def main():
         links = await get_event_links(page)
         print(f"Found {len(links)} events\n")
 
-        print("Step 2: Fetching dates from event pages...")
-        for href, artist in links:
-            print(f"  {artist[:50]}...")
-            start, end = await get_event_date(page, href)
-            if not start:
-                print(f"    ⚠ No date found, skipping")
-                continue
-            day, month, year = start
-            end_date_str = f"{end[0]} {end[1]} {end[2]}" if end else None
-            all_events.append({
-                "artist": artist,
-                "day": day,
-                "month": month,
-                "year": year,
-                "end_date": end_date_str,
-                "venue": "Cirkus",
-                "event_url": BASE_URL + href,
-                "ticket_url": BASE_URL + href,
-            })
+        if links:
+            print("Step 2: Fetching dates from event pages...")
+            for href, artist in links:
+                print(f"  {artist[:50]}...")
+                start, end = await get_event_date(page, href)
+                if not start:
+                    print(f"    ⚠ No date found, skipping")
+                    continue
+                day, month, year = start
+                end_date_str = f"{end[0]} {end[1]} {end[2]}" if end else None
+                all_events.append({
+                    "artist": artist,
+                    "day": day,
+                    "month": month,
+                    "year": year,
+                    "end_date": end_date_str,
+                    "venue": "Cirkus",
+                    "event_url": BASE_URL + href,
+                    "ticket_url": BASE_URL + href,
+                })
 
         await browser.close()
 
