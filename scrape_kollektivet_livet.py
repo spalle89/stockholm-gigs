@@ -43,9 +43,16 @@ async def scrape():
         page = await browser.new_page()
 
         print("Loading Kollektivet Livet program page...")
-await page.goto(URL, wait_until="domcontentloaded", timeout=60000)
-# Vänta sedan in t.ex. containern där evenemangen ligger:
-await page.wait_for_selector("din-event-selector", timeout=30000)
+        try:
+            await page.goto(URL, wait_until="domcontentloaded", timeout=60000)
+            await page.wait_for_selector("a[href*='/event/'], h3", timeout=30000)
+        except Exception as e:
+            print(f"[Kollektivet Livet] Kunde inte ladda sidan i tid: {e}")
+            await browser.close()
+            with open("events_kollektivet_livet.json", "w", encoding="utf-8") as f:
+                json.dump([], f, ensure_ascii=False, indent=2)
+            return
+
         await page.wait_for_timeout(1000)
 
         # Scroll incrementally and click "LÄS IN FLER" whenever it appears
@@ -82,7 +89,7 @@ await page.wait_for_selector("din-event-selector", timeout=30000)
                 if at_bottom:
                     no_button_count += 1
 
-        print(f"Done clicking. Extracting HTML...")
+        print("Done clicking. Extracting HTML...")
         html = await page.content()
         await browser.close()
 
