@@ -43,7 +43,9 @@ async def scrape():
         page = await browser.new_page()
 
         print("Loading Kollektivet Livet program page...")
-        await page.goto(URL, wait_until="networkidle")
+await page.goto(URL, wait_until="domcontentloaded", timeout=60000)
+# Vänta sedan in t.ex. containern där evenemangen ligger:
+await page.wait_for_selector("din-event-selector", timeout=30000)
         await page.wait_for_timeout(1000)
 
         # Scroll incrementally and click "LÄS IN FLER" whenever it appears
